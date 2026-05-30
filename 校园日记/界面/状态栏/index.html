@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园日记 - 状态栏</title>
+<style>
+  :root {
+    --c-bg: #1a1a2e;
+    --c-surface: #16213e;
+    --c-surface-hover: #1c2a4a;
+    --c-primary: #e2a7c6;
+    --c-danger: #c97b8b;
+    --c-good: #7bc9a0;
+    --c-evil: #c97b8b;
+    --c-warn: #d4a76a;
+    --c-text: #e0dce4;
+    --c-text-muted: #8b8599;
+    --c-border: #2a2540;
+    --c-accent: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--c-bg);
+    color: var(--c-text);
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  .header {
+    text-align: center;
+    padding: 6px 0 10px;
+    border-bottom: 1px solid var(--c-border);
+    margin-bottom: 10px;
+  }
+  .header h1 { font-size: 14px; font-weight: 600; color: var(--c-primary); }
+  .header .time { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
+  .npc-card {
+    background: var(--c-surface);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-left: 3px solid var(--c-border);
+    transition: background 0.2s;
+  }
+  .npc-card:hover { background: var(--c-surface-hover); }
+  .npc-card.conquer { border-left-color: var(--c-primary); }
+  .npc-card.good { border-left-color: var(--c-good); }
+  .npc-card.evil { border-left-color: var(--c-evil); }
+  .npc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .npc-name { font-weight: 600; font-size: 13px; }
+  .npc-stage {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--c-border);
+    color: var(--c-text-muted);
+  }
+  .npc-stage.conquer { background: rgba(226, 167, 198, 0.2); color: var(--c-primary); }
+  .npc-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 4px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.03);
+    border-radius: 4px;
+    padding: 3px 6px;
+    text-align: center;
+  }
+  .stat-label { font-size: 9px; color: var(--c-text-muted); }
+  .stat-value { font-size: 13px; font-weight: 600; }
+  .stat-value.good { color: var(--c-good); }
+  .stat-value.evil { color: var(--c-evil); }
+  .stat-value.warn { color: var(--c-warn); }
+  .info-line {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: var(--c-text-muted);
+  }
+  .info-line span { white-space: nowrap; }
+  .empty {
+    text-align: center;
+    color: var(--c-text-muted);
+    padding: 30px 0;
+    font-size: 12px;
+  }
+  .phase-badge {
+    text-align: center;
+    padding: 4px 0;
+    margin-bottom: 8px;
+    font-size: 11px;
+    color: var(--c-accent);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="empty">等待数据连接...</div>
+</div>
+<script>
+(function() {
+  var data = null;
+
+  function render() {
+    var el = document.getElementById('app');
+    if (!data || !data.stat_data) {
+      el.innerHTML = '<div class="empty">等待数据连接...</div>';
+      return;
+    }
+    var s = data.stat_data;
+    var npcs = ['沧小鱼','陆清茶','青丘雪','夏霞','爱丽丝','墨月','霍莉莉'];
+    var routeLabels = { '善良': '善', '邪恶': '恶', '未确定': '-' };
+    var html = '';
+
+    // Header
+    html += '<div class="header">';
+    html += '<h1>圣百合女子学院</h1>';
+    html += '<div class="time">' + (s.世界.当前区域 || '—') + ' · ' + (s.世界.当前场景 || '—') + ' · ' + (s.世界.当前时间 || '—') + '</div>';
+    html += '</div>';
+
+    // Exposure
+    html += '<div class="info-line" style="margin-bottom:8px;justify-content:center">';
+    html += '<span>暴露风险: <b style="color:' + (s.主角.身份暴露风险 > 50 ? 'var(--c-danger)' : 'var(--c-text)') + '">' + s.主角.身份暴露风险 + '</b></span>';
+    html += '<span>伪装: ' + s.主角.当前伪装状态 + '</span>';
+    html += '</div>';
+
+    // NPC cards
+    for (var i = 0; i < npcs.length; i++) {
+      var name = npcs[i];
+      var n = s[name];
+      if (!n) continue;
+      var stage = n.攻略阶段;
+      var route = n.攻略路线;
+      var cardClass = 'npc-card';
+      if (stage === '攻略完成') cardClass += ' conquer';
+      else if (route === '善良') cardClass += ' good';
+      else if (route === '邪恶') cardClass += ' evil';
+      var stageClass = stage === '攻略完成' ? 'npc-stage conquer' : 'npc-stage';
+
+      html += '<div class="' + cardClass + '">';
+      html += '<div class="npc-header">';
+      html += '<span class="npc-name">' + name + '</span>';
+      html += '<span class="' + stageClass + '">' + stage + ' · ' + (routeLabels[route] || route) + '</span>';
+      html += '</div>';
+      html += '<div class="npc-stats">';
+      html += '<div class="stat"><div class="stat-label">好感</div><div class="stat-value' + (n.好感度 >= 60 ? ' good' : n.好感度 < 0 ? ' evil' : '') + '">' + n.好感度 + '</div></div>';
+      html += '<div class="stat"><div class="stat-label">恐惧</div><div class="stat-value' + (n.恐惧度 >= 50 ? ' evil' : '') + '">' + n.恐惧度 + '</div></div>';
+      html += '<div class="stat"><div class="stat-label">屈服</div><div class="stat-value' + (n.屈服度 >= 50 ? ' evil' : '') + '">' + n.屈服度 + '</div></div>';
+      html += '<div class="stat"><div class="stat-label">反抗</div><div class="stat-value' + (n.反抗度 >= 50 ? ' warn' : '') + '">' + n.反抗度 + '</div></div>';
+      html += '</div></div>';
+    }
+
+    el.innerHTML = html;
+  }
+
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'mvu_data') {
+      data = e.data.payload || e.data;
+      render();
+    }
+  });
+
+  // Fallback: check if data is injected via global
+  if (window.__mvu_data) {
+    data = window.__mvu_data;
+    render();
+  }
+})();
+</script>
+</body>
+</html>
