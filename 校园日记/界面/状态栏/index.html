@@ -2,180 +2,76 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>校园日记 - 状态栏</title>
 <style>
-  :root {
-    --c-bg: #1a1a2e;
-    --c-surface: #16213e;
-    --c-surface-hover: #1c2a4a;
-    --c-primary: #e2a7c6;
-    --c-danger: #c97b8b;
-    --c-good: #7bc9a0;
-    --c-evil: #c97b8b;
-    --c-warn: #d4a76a;
-    --c-text: #e0dce4;
-    --c-text-muted: #8b8599;
-    --c-border: #2a2540;
-    --c-accent: #a78bfa;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--c-bg);
-    color: var(--c-text);
-    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    font-size: 12px;
-    line-height: 1.5;
-    padding: 8px;
-    min-height: 100vh;
-    overflow-y: auto;
-  }
-  .header {
-    text-align: center;
-    padding: 6px 0 10px;
-    border-bottom: 1px solid var(--c-border);
-    margin-bottom: 10px;
-  }
-  .header h1 { font-size: 14px; font-weight: 600; color: var(--c-primary); }
-  .header .time { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
-  .npc-card {
-    background: var(--c-surface);
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-bottom: 6px;
-    border-left: 3px solid var(--c-border);
-    transition: background 0.2s;
-  }
-  .npc-card:hover { background: var(--c-surface-hover); }
-  .npc-card.conquer { border-left-color: var(--c-primary); }
-  .npc-card.good { border-left-color: var(--c-good); }
-  .npc-card.evil { border-left-color: var(--c-evil); }
-  .npc-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-  }
-  .npc-name { font-weight: 600; font-size: 13px; }
-  .npc-stage {
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: var(--c-border);
-    color: var(--c-text-muted);
-  }
-  .npc-stage.conquer { background: rgba(226, 167, 198, 0.2); color: var(--c-primary); }
-  .npc-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-    gap: 4px;
-  }
-  .stat {
-    background: rgba(255,255,255,0.03);
-    border-radius: 4px;
-    padding: 3px 6px;
-    text-align: center;
-  }
-  .stat-label { font-size: 9px; color: var(--c-text-muted); }
-  .stat-value { font-size: 13px; font-weight: 600; }
-  .stat-value.good { color: var(--c-good); }
-  .stat-value.evil { color: var(--c-evil); }
-  .stat-value.warn { color: var(--c-warn); }
-  .info-line {
-    display: flex;
-    gap: 12px;
-    font-size: 10px;
-    color: var(--c-text-muted);
-  }
-  .info-line span { white-space: nowrap; }
-  .empty {
-    text-align: center;
-    color: var(--c-text-muted);
-    padding: 30px 0;
-    font-size: 12px;
-  }
-  .phase-badge {
-    text-align: center;
-    padding: 4px 0;
-    margin-bottom: 8px;
-    font-size: 11px;
-    color: var(--c-accent);
-  }
+:root{--bg:#1a1a2e;--srf:#16213e;--p:#e2a7c6;--g:#7bc9a0;--e:#c97b8b;--w:#d4a76a;--t:#e0dce4;--m:#8b8599;--b:#2a2540}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font:12px/1.5 "PingFang SC","Microsoft YaHei",sans-serif;padding:8px}
+.hd{text-align:center;padding:6px 0 8px;border-bottom:1px solid var(--b);margin-bottom:6px}
+.hd h1{font-size:14px;color:var(--p)}
+.hd .loc{font-size:10px;color:var(--m);margin-top:1px}
+.card{background:var(--srf);border-radius:6px;padding:5px 8px;margin-bottom:3px;border-left:3px solid var(--b)}
+.card.done{border-left-color:var(--p)}
+.card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:1px}
+.card .name{font-weight:600}
+.card .badge{font-size:10px;color:var(--m);background:rgba(255,255,255,.05);padding:1px 5px;border-radius:3px}
+.card .badge.done{color:var(--p);background:rgba(226,167,198,.15)}
+.card .nums{display:flex;gap:8px;font-size:11px}
+.card .nums span{white-space:nowrap}
+.wait{text-align:center;color:var(--m);padding:20px 0}
 </style>
 </head>
 <body>
-<div id="app">
-  <div class="empty">等待数据连接...</div>
-</div>
+<div id="app"><div class="wait">等待变量更新...</div></div>
 <script>
-(function() {
-  var data = null;
+var npcs=['沧小鱼','陆清茶','青丘雪','夏霞','爱丽丝','墨月','霍莉莉'];
+var rl={善良:'善',邪恶:'恶',未确定:'-'};
+var lastRender='';
 
-  function render() {
-    var el = document.getElementById('app');
-    if (!data || !data.stat_data) {
-      el.innerHTML = '<div class="empty">等待数据连接...</div>';
-      return;
-    }
-    var s = data.stat_data;
-    var npcs = ['沧小鱼','陆清茶','青丘雪','夏霞','爱丽丝','墨月','霍莉莉'];
-    var routeLabels = { '善良': '善', '邪恶': '恶', '未确定': '-' };
-    var html = '';
+function tryParse(s){
+  try{var o=JSON.parse(s);return o.stat_data||o}catch(e){return null}
+}
 
-    // Header
-    html += '<div class="header">';
-    html += '<h1>圣百合女子学院</h1>';
-    html += '<div class="time">' + (s.世界.当前区域 || '—') + ' · ' + (s.世界.当前场景 || '—') + ' · ' + (s.世界.当前时间 || '—') + '</div>';
-    html += '</div>';
-
-    // Exposure
-    html += '<div class="info-line" style="margin-bottom:8px;justify-content:center">';
-    html += '<span>暴露风险: <b style="color:' + (s.主角.身份暴露风险 > 50 ? 'var(--c-danger)' : 'var(--c-text)') + '">' + s.主角.身份暴露风险 + '</b></span>';
-    html += '<span>伪装: ' + s.主角.当前伪装状态 + '</span>';
-    html += '</div>';
-
-    // NPC cards
-    for (var i = 0; i < npcs.length; i++) {
-      var name = npcs[i];
-      var n = s[name];
-      if (!n) continue;
-      var stage = n.攻略阶段;
-      var route = n.攻略路线;
-      var cardClass = 'npc-card';
-      if (stage === '攻略完成') cardClass += ' conquer';
-      else if (route === '善良') cardClass += ' good';
-      else if (route === '邪恶') cardClass += ' evil';
-      var stageClass = stage === '攻略完成' ? 'npc-stage conquer' : 'npc-stage';
-
-      html += '<div class="' + cardClass + '">';
-      html += '<div class="npc-header">';
-      html += '<span class="npc-name">' + name + '</span>';
-      html += '<span class="' + stageClass + '">' + stage + ' · ' + (routeLabels[route] || route) + '</span>';
-      html += '</div>';
-      html += '<div class="npc-stats">';
-      html += '<div class="stat"><div class="stat-label">好感</div><div class="stat-value' + (n.好感度 >= 60 ? ' good' : n.好感度 < 0 ? ' evil' : '') + '">' + n.好感度 + '</div></div>';
-      html += '<div class="stat"><div class="stat-label">恐惧</div><div class="stat-value' + (n.恐惧度 >= 50 ? ' evil' : '') + '">' + n.恐惧度 + '</div></div>';
-      html += '<div class="stat"><div class="stat-label">屈服</div><div class="stat-value' + (n.屈服度 >= 50 ? ' evil' : '') + '">' + n.屈服度 + '</div></div>';
-      html += '<div class="stat"><div class="stat-label">反抗</div><div class="stat-value' + (n.反抗度 >= 50 ? ' warn' : '') + '">' + n.反抗度 + '</div></div>';
-      html += '</div></div>';
-    }
-
-    el.innerHTML = html;
+function render(s){
+  if(!s){document.getElementById('app').innerHTML='<div class="wait">等待变量更新...<br><small>请发送消息触发 AI 回复</small></div>';return}
+  var json=JSON.stringify(s);
+  if(json===lastRender)return;
+  lastRender=json;
+  var h='<div class="hd"><h1>圣百合女子学院</h1><div class="loc">'+
+    ((s.世界||{}).当前区域||'—')+' · '+((s.世界||{}).当前场景||'—')+' · '+((s.世界||{}).当前时间||'—')+
+    ' | 暴露:'+((s.主角||{}).身份暴露风险||0)+' '+((s.主角||{}).当前伪装状态||'正常')+'</div></div>';
+  for(var i=0;i<npcs.length;i++){
+    var n=s[npcs[i]];if(!n)continue;
+    var done=n.攻略阶段==='攻略完成';
+    var af=n.好感度,fr=n.恐惧度,yd=n.屈服度,fk=n.反抗度;
+    h+='<div class="card'+(done?' done':'')+'">';
+    h+='<div class="top"><span class="name">'+npcs[i]+'</span><span class="badge'+(done?' done':'')+'">'+n.攻略阶段+' · '+(rl[n.攻略路线]||n.攻略路线)+'</span></div>';
+    h+='<div class="nums">';
+    h+='<span>好感 <b style="color:'+(af>=60?'var(--g)':af<0?'var(--e)':'var(--t)')+'">'+af+'</b></span>';
+    h+='<span>恐惧 <b style="color:'+(fr>=50?'var(--e)':'var(--t)')+'">'+fr+'</b></span>';
+    h+='<span>屈服 <b style="color:'+(yd>=50?'var(--e)':'var(--t)')+'">'+yd+'</b></span>';
+    h+='<span>反抗 <b style="color:'+(fk>=50?'var(--w)':'var(--t)')+'">'+fk+'</b></span>';
+    h+='</div></div>';
   }
+  document.getElementById('app').innerHTML=h;
+}
 
-  window.addEventListener('message', function(e) {
-    if (e.data && e.data.type === 'mvu_data') {
-      data = e.data.payload || e.data;
-      render();
-    }
-  });
+window.addEventListener('message',function(e){
+  if(!e.data)return;
+  var d=e.data;
+  // 尝试多种数据格式
+  var s=null;
+  if(d.type==='mvu_data') s=d.payload||d.stat_data||d;
+  else if(d.stat_data) s=d.stat_data;
+  else if(typeof d==='object'&&(d.世界||d.沧小鱼)) s=d;
+  if(s&&typeof s==='object') render(s);
+});
 
-  // Fallback: check if data is injected via global
-  if (window.__mvu_data) {
-    data = window.__mvu_data;
-    render();
-  }
-})();
+// 定期通过 parent.postMessage 请求数据
+setInterval(function(){
+  try{parent.postMessage({type:'request_mvu_data'},'*')}catch(e){}
+},2000);
+
+render(null);
 </script>
 </body>
 </html>
